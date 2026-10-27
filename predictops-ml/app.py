@@ -1,3 +1,4 @@
+import logging
 import time
 
 import numpy as np
@@ -7,7 +8,8 @@ from fastapi.responses import Response
 from prometheus_client import Gauge, generate_latest
 from time_rcd import TimeRCDDetector
 
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 app = FastAPI()
 
 MIMIR_URL = "http://mimir-gateway.monitoring.svc.cluster.local"
@@ -39,28 +41,21 @@ THRESHOLDS = {
 }
 
 
-detector = TimeRCDDetector.from_pretrained(
-    variant="multi",
-    device="cpu"
-)
+detector = TimeRCDDetector.from_pretrained(variant="multi", device="cpu")
 
 
-anomaly = Gauge(
-    "predictops_anomaly_score",
-    "Latest anomaly score",
-    ["target_service"]
-)
+anomaly = Gauge("predictops_anomaly_score", "Latest anomaly score", ["target_service"])
 
 threshold_metric = Gauge(
     "predictops_anomaly_threshold",
     "Anomaly threshold for each service",
-    ["target_service"]
+    ["target_service"],
 )
 
 anomaly_state = Gauge(
     "predictops_is_anomaly",
     "Whether the service is currently anomalous",
-    ["target_service"]
+    ["target_service"],
 )
 
 
@@ -114,15 +109,9 @@ def score_service(service):
             "status": "no_data",
         }
 
-    cpu_values = [
-        float(value[1])
-        for value in cpu_results[0]["values"]
-    ]
+    cpu_values = [float(value[1]) for value in cpu_results[0]["values"]]
 
-    memory_values = [
-        float(value[1])
-        for value in memory_results[0]["values"]
-    ]
+    memory_values = [float(value[1]) for value in memory_results[0]["values"]]
 
     n = min(
         len(cpu_values),
@@ -136,32 +125,25 @@ def score_service(service):
             "points": n,
         }
 
-    window = np.column_stack([
-        cpu_values[-n:],
-        memory_values[-n:],
-    ])
+    window = np.column_stack(
+        [
+            cpu_values[-n:],
+            memory_values[-n:],
+        ]
+    )
 
     scores = detector.predict(window)
 
-    latest_score = round(
-        float(np.asarray(scores).reshape(-1)[-1]),
-        5
-    )
+    latest_score = round(float(np.asarray(scores).reshape(-1)[-1]), 5)
 
     service_threshold = round(THRESHOLDS[service], 5)
     is_anomaly = latest_score > service_threshold
 
-    anomaly.labels(
-        target_service=service
-    ).set(latest_score)
+    anomaly.labels(target_service=service).set(latest_score)
 
-    threshold_metric.labels(
-        target_service=service
-    ).set(service_threshold)
+    threshold_metric.labels(target_service=service).set(service_threshold)
 
-    anomaly_state.labels(
-        target_service=service
-    ).set(1 if is_anomaly else 0)
+    anomaly_state.labels(target_service=service).set(1 if is_anomaly else 0)
 
     return {
         "service": service,
@@ -181,12 +163,15 @@ def score_all_services():
             result = score_service(service)
             results.append(result)
 
-        except Exception as exc:
-            results.append({
-                "service": service,
-                "status": "error",
-                "error": str(exc),
-            })
+        except (requests.RequestException, ValueError, KeyError, RuntimeError) as exc:
+            logger.exception("Failed to score service: %s", service)
+            results.append(
+                {
+                    "service": service,
+                    "status": "error",
+                    "error": str(exc),
+                }
+            )
 
     return {
         "namespace": NAMESPACE,
@@ -205,7 +190,8 @@ def score_single_service(service: str):
     try:
         return score_service(service)
 
-    except Exception as exc:
+    except (requests.RequestException, ValueError, KeyError, RuntimeError) as exc:
+        logger.exception("Failed to score service: %s", service)
         return {
             "service": service,
             "status": "error",
