@@ -1,8 +1,8 @@
 import logging
-import time
 
 import numpy as np
 import requests
+from data.mimir import query_mimir
 from fastapi import FastAPI
 from fastapi.responses import Response
 from prometheus_client import Gauge, generate_latest
@@ -59,25 +59,6 @@ anomaly_state = Gauge(
 )
 
 
-def query_mimir(promql):
-    end = int(time.time())
-    start = end - 600
-
-    response = requests.get(
-        f"{MIMIR_URL}/prometheus/api/v1/query_range",
-        params={
-            "query": promql,
-            "start": start,
-            "end": end,
-            "step": 30,
-        },
-        timeout=10,
-    )
-
-    response.raise_for_status()
-    return response.json()
-
-
 def score_service(service):
     cpu_query = f"""
     sum(
@@ -97,8 +78,8 @@ def score_service(service):
     )
     """
 
-    cpu_data = query_mimir(cpu_query)
-    memory_data = query_mimir(memory_query)
+    cpu_data = query_mimir(cpu_query, MIMIR_URL)
+    memory_data = query_mimir(memory_query, MIMIR_URL)
 
     cpu_results = cpu_data["data"]["result"]
     memory_results = memory_data["data"]["result"]
