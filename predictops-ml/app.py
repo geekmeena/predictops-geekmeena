@@ -5,8 +5,8 @@ import requests
 from data.mimir import query_mimir
 from fastapi import FastAPI
 from fastapi.responses import Response
+from model.inference import calculate_anomaly_score
 from prometheus_client import Gauge, generate_latest
-from time_rcd import TimeRCDDetector
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,9 +39,6 @@ THRESHOLDS = {
     "transactions-service": 0.035,
     "user-service": 0.035,
 }
-
-
-detector = TimeRCDDetector.from_pretrained(variant="multi", device="cpu")
 
 
 anomaly = Gauge("predictops_anomaly_score", "Latest anomaly score", ["target_service"])
@@ -113,9 +110,7 @@ def score_service(service):
         ]
     )
 
-    scores = detector.predict(window)
-
-    latest_score = round(float(np.asarray(scores).reshape(-1)[-1]), 5)
+    latest_score = calculate_anomaly_score(window)
 
     service_threshold = round(THRESHOLDS[service], 5)
     is_anomaly = latest_score > service_threshold
