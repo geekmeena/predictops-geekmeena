@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import requests
 from data.mimir import query_mimir
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
 from model.inference import calculate_anomaly_score
 from prometheus_client import Gauge, generate_latest
@@ -158,10 +158,10 @@ def score_all_services():
 @app.post("/score/{service}")
 def score_single_service(service: str):
     if service not in SERVICES:
-        return {
-            "error": "unknown service",
-            "allowed_services": SERVICES,
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Unknown service",
+        )
 
     try:
         return score_service(service)

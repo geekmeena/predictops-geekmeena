@@ -1,8 +1,9 @@
 import sys
-import pytest
-import requests
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
+import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -25,6 +26,5 @@ def test_query_mimir_connection_error():
     with patch(
         "data.mimir.requests.get",
         side_effect=requests.ConnectionError("Mimir unavailable"),
-    ):
-        with pytest.raises(requests.ConnectionError):
-            query_mimir("up", "http://test-mimir")    
+    ), pytest.raises(requests.ConnectionError):
+        query_mimir("up", "http://test-mimir")    
