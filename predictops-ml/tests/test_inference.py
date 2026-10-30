@@ -14,13 +14,15 @@ from model.inference import calculate_anomaly_score
 
 
 def test_anomaly_score():
-    window = np.array([
-        [0.2, 100],
-        [0.3, 110],
-        [0.4, 120],
-        [0.5, 130],
-        [0.6, 140],
-    ])
+    window = np.array(
+        [
+            [0.2, 100],
+            [0.3, 110],
+            [0.4, 120],
+            [0.5, 130],
+            [0.6, 140],
+        ]
+    )
 
     with patch("model.inference.detector") as mock_detector:
         mock_detector.predict.return_value = np.array([0.01234567])

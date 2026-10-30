@@ -21,9 +21,10 @@ def test_health_endpoint():
     assert response.json()["namespace"] == "banking-app"
     assert len(response.json()["services"]) == 8
 
+
 def test_unknown_service():
     client = TestClient(app)
     response = client.post("/score/unknown-service")
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Unknown service"   
+    assert response.json()["detail"] == "Unknown service"
