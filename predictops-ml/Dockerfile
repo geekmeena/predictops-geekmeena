@@ -27,6 +27,11 @@ RUN pip install --no-cache-dir \
     requests \
     prometheus-client
 COPY app.py .
+COPY data/ ./data/
+COPY model/ ./model/
+
+RUN useradd --create-home appuser && chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 8000
 
