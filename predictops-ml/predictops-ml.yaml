@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: predictops-ml
-        image: 200174508136.dkr.ecr.ap-south-1.amazonaws.com/predictops-ml:latest
+        image: 200174508136.dkr.ecr.ap-south-1.amazonaws.com/predictops-ml:assignment2-amd64
         ports:
         - containerPort: 8000
         resources:
